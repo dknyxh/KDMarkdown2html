@@ -45,6 +45,8 @@ rules_order = [];
 # If nothing is replace, enclose each line in <p> mode.
 # Only two line break break the current mode.
 #Step3
+# Postprocessings
+#Step3
 # ?
 #Step4
 # Profit!
@@ -63,9 +65,6 @@ class MDTag(object):
 		the method on the next string.
 		"""
 		raise Exception('Method not implemented!')
-
-	def flush(self):
-		pass
 
 class MDRegexTag(MDTag):
 	def __init__(self, nameStr, regexStr):
@@ -132,6 +131,12 @@ class MDParaTag(MDTag):
 			pass
 
 class MDListTag(MDRegexTag):
+	"""
+	r" *[0-9]+\. .*"
+	"""
+	pass
+
+class MDBlockquotes(MDRegexTag):
 	pass
 
 
@@ -211,10 +216,121 @@ class MDStrikeThroughTag(MDRegexTag):
 		pass
 
 class MDImgTag(MDRegexTag):
-	pass
+	def __init__(self):
+		super(MDImgTag,self).__init__("img tag",r"\!\[.*?\]\(.*?\)")
+
+	def action(self,origStr):
+		pass
+
 
 class MDLinkTag(MDRegexTag):
-	pass
+	def __init__(self):
+		super(MDLinkTag,self).__init__("link tag",r"\[.*?\]\(.*?\)")
+	def action(self,origStr):
+		pass
+
+class MDInlineCode(MDTag):
+	def __init__(self):
+		super(MDInlineCode,self).__init__("inline code tag")
+
+	def action(self,origStr):
+		# 
+		# 	i = 0
+		# 	ignoretickCount = 0
+		# 	tickPairs = []
+		# 	while i < len(origStr):
+		# 		# accept tick < tick count
+		# 		# print(ignoretickCount)
+		# 		if ignoretickCount > 0:
+		# 			if origStr[i] == "`":
+		# 				tickcount = self._numberOfConsecutiveTicks(origStr,i)
+		# 				if tickcount >= ignoretickCount:
+		# 					tickPairs.append((i, ignoretickCount))
+		# 					i+= ignoretickCount
+		# 					ignoretickCount = 0
+		# 				else:
+		# 					i+= tickcount
+		# 			else:
+		# 				i+= 1
+		# 		# accept all tick
+		# 		else:
+		# 			if origStr[i] == "`":
+		# 				tickcount = self._numberOfConsecutiveTicks(origStr,i)
+		# 				if tickcount >= 1:
+		# 					ignoretickCount = tickcount
+		# 				tickPairs.append((i, tickcount))
+		# 				i+= tickcount
+		# 			else:
+		# 				i+= 1
+		# 	for each in range(len(tickPairs)/2):
+		# 		print([tickPairs[each*2][0],tickPairs[each*2+1][0] + tickPairs[each*2+1][1]])
+		# 		print(origStr[tickPairs[each*2][0]:tickPairs[each*2+1][0] + tickPairs[each*2+1][1]])
+
+		# 	if len(tickPairs) % 2 == 0:
+		# 		print("good")
+		# 	else:
+		# 		print("bad")
+		i = 0
+		tickList = []
+		tickPairs = []
+		while i <len(origStr):
+			if origStr[i] == "`":
+				tickcount = self._numberOfConsecutiveTicks(origStr,i)
+				tickList.append([i,tickcount])
+				i+= tickcount
+			else:
+				i+=1
+		j = 0
+		while j < len(tickList):
+			deduction = 0
+			found = False
+			jchange = 0
+			while found == False and tickList[j][1] - deduction > 0:
+				curPosition = tickList[j][0] + deduction
+				curTickCount = tickList[j][1] - deduction
+				k = j + 1
+				while k < len(tickList):
+					if curTickCount <= tickList[k][1]:
+						if (curTickCount < tickList[k][1]):
+							tickList.insert(k+1,[tickList[k][0]+curTickCount, tickList[k][1]-curTickCount])
+						tickList[k][1] = curTickCount
+						tickPairs.append(((curPosition,curTickCount),tickList[k]))
+						found = True
+						inbetween = 0
+						while inbetween < k-j+1:
+							del tickList[j]
+							inbetween += 1
+						jchange = -1	
+						break
+					k += 1
+				deduction +=1
+			j+= (1 + jchange)
+
+
+		for each in range(len(tickPairs)):
+			print([tickPairs[each][0][0],tickPairs[each][1][0] + tickPairs[each][1][1]])
+			print(origStr[tickPairs[each][0][0]:tickPairs[each][1][0] + tickPairs[each][1][1]])
+
+			
+
+					
+
+	def _numberOfConsecutiveTicks(self, origStr, startingIndex):
+		j = startingIndex
+		tickcount = 0
+		while j < len(origStr):
+			if origStr[j] == "`":
+				tickcount += 1
+			else:
+				break
+			j += 1
+		return tickcount
+
+
+			
+
+
+
 
 
 #Parser
@@ -242,8 +358,8 @@ class MDBlockParser:
 class MDInlineParser:
 	pass
 # Test:
-h = MDHeaderTag();
-print h.action("######hahsdf###")
+# h = MDHeaderTag();
+# print h.action("######hahsdf###")
 
 # b = MDBoldTag();
 # print b.action("sDAFSd")
@@ -265,41 +381,58 @@ sdfsdfa
     sfdaf
     
 """
-return_str = ""
-control = None
-for line in test_code.splitlines(True):
-	print("%%%%%%" + line)
-	if (control == None):
-		print("Control none")
-		new_str,match,capture = c.action(line)
-		print("$$Add str:" + new_str)
-		return_str += new_str
-		if match:
-			print("match!Should not do others")
-		else:
-			print("Not match!Should do others")
-		if capture:
-			control = c
-			print("capture!")
-		else:
-			control = None
-			print("not capture!")
-	else:
-		print("Control is c")
-		new_str,match,capture = c.action(line)
-		return_str += new_str
-		print("$$Add str:" + new_str)
-		if match:
-			print("continue match!Should not do others")
-		else:
-			print("Not match!Out")
-		if capture:
-			control = c
-			print("continue capture!")
-		else:
-			control = None
-			print("not capture!Out")
-if control:
-	new_str,match,capture = c.action("   dsf\n")
-	return_str += new_str
-print(return_str)
+# return_str = ""
+# control = None
+# for line in test_code.splitlines(True):
+# 	print("%%%%%%" + line)
+# 	if (control == None):
+# 		print("Control none")
+# 		new_str,match,capture = c.action(line)
+# 		print("$$Add str:" + new_str)
+# 		return_str += new_str
+# 		if match:
+# 			print("match!Should not do others")
+# 		else:
+# 			print("Not match!Should do others")
+# 		if capture:
+# 			control = c
+# 			print("capture!")
+# 		else:
+# 			control = None
+# 			print("not capture!")
+# 	else:
+# 		print("Control is c")
+# 		new_str,match,capture = c.action(line)
+# 		return_str += new_str
+# 		print("$$Add str:" + new_str)
+# 		if match:
+# 			print("continue match!Should not do others")
+# 		else:
+# 			print("Not match!Out")
+# 		if capture:
+# 			control = c
+# 			print("continue capture!")
+# 		else:
+# 			control = None
+# 			print("not capture!Out")
+# if control:
+# 	new_str,match,capture = c.action("   dsf\n")
+# 	return_str += new_str
+# print(return_str)
+
+inline = MDInlineCode()
+inline.action("""
+``ds`af``
+``saf``
+`
+`sdf ` `
+`` ` ``
+``` `` ```
+`d```
+```sdaf`` sdasdf``` sdfa`saf``sdvsvzx`` `` sdaf`1sv`svzxc``
+	""")
+
+
+# inline = MDInlineCode()
+# inline.action("""`d```
+# ``""")
