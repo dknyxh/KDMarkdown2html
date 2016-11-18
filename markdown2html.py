@@ -147,7 +147,7 @@ class MDListTag(MDRegexTag):
     """
     def __init__(self):
         self._reset()
-        super(MDListTag,self).__init__("list tag", r"^ *(?P<symbol>([0-9]+?\.)|-) (?P<content>.*)")
+        super(MDListTag,self).__init__("list tag", r"^ *(?P<symbol>([0-9]+?\.)|-) (?P<content>.*\n?)")
 
     def action(self,origStr):
         if self.capturingMode == False:
@@ -172,10 +172,15 @@ class MDListTag(MDRegexTag):
                      self.capturedStrStack[-1][-1] += origStr.lstrip()
                      return ("", True, True)
             elif matchObj is None and self.escaping:
-                self._rewindStackToIndentLevel(-1)
-                return_str = self.returnStr
-                self._reset()
-                return (return_str, False, False)
+                if origStr.lstrip(' ') == '\n': #an empty line
+                    self.escaping = True
+                    self.capturedStrStack[-1][-1] += '\n'
+                    return ("", True, True)
+                else:
+                    self._rewindStackToIndentLevel(-1)
+                    return_str = self.returnStr
+                    self._reset()
+                    return (return_str, False, False)
             else:
                 self.escaping = False
                 newString = matchObj.group("content")
@@ -184,11 +189,6 @@ class MDListTag(MDRegexTag):
                 if newIndent < self.indentStack[-1][0]:
                     if self._insertCurrentOrRewind(newIndent):
                         self._rewindStackToIndentLevel(newIndent)
-#                        if len(self.indentStack) == 0:
-#                            self._pushStackToIndentLevel(newIndent, newString, symbols)
-#                        if newIndent > self.indentStack[-1][0]:
-#                            self._pushStackToIndentLevel(newIndent, newString, symbols)
-#                        elif newIndent == self.indentStack[-1][0]:
                         self._insertOnCurrentStack(newString)
                     else:
                         self._insertOnCurrentStack(newString)
@@ -205,6 +205,7 @@ class MDListTag(MDRegexTag):
             return "<ul>" , "</ul>"
         else:
             return "<ol>" , "</ol>"
+
     def _reset(self):
         self.escaping = False
         self.capturingMode = False
@@ -261,8 +262,121 @@ class MDListTag(MDRegexTag):
 
 class MDQuoteTag(MDRegexTag):
     def __init__(self):
-        super(MDQuoteTag, self).__init__("quote tag", r"^> ?(.*)")
+        self._reset()
+        super(MDQuoteTag, self).__init__("quote tag", r"^(> ?)+(?P<content>.*\n?)")
+        
+    def action(self,origStr):
+        if self.capturingMode == False:
+            matchObj = self.regexObj.match(origStr)
+            if matchObj is None:
+                return ("",False,False)
+            else:
+                newString = matchObj.group("content")
+                self._pushStackToIndentLevel(self._numberOfStartingBackquote(origStr), newString)
+                self.capturingMode = True
+                return ("",True,True)
+        else:
+            matchObj = self.regexObj.match(origStr)
+            newIndent = self._numberOfStartingBackquote(origStr)
+            if matchObj is None and not self.escaping:
+                if origStr.lstrip(' ') == '\n': #an empty line
+                    self.escaping = True
+                    self.capturedStrStack[-1][-1] += '\n'
+                    return ("", True, True)
+                else:
+                     self.capturedStrStack[-1][-1] += origStr.lstrip()
+                     return ("", True, True)
+            elif matchObj is None and self.escaping:
+                if origStr.lstrip(' ') == '\n': #an empty line
+                    self.escaping = True
+                    self.capturedStrStack[-1][-1] += '\n'
+                    return ("", True, True)
+                else:
+                    self._rewindStackToIndentLevel(-1)
+                    return_str = self.returnStr
+                    self._reset()
+                    return (return_str, False, False)
+            else:
+                self.escaping = False
+                newString = matchObj.group("content")
+                if newIndent < self.indentStack[-1]:
+                    if self._insertCurrentOrRewind(newIndent):
+                        self._rewindStackToIndentLevel(newIndent)
+                        self._insertOnCurrentStack(newString)
+                    else:
+                        self._insertOnCurrentStack(newString)
+                elif newIndent == self.indentStack[-1]:
+                    self._insertOnCurrentStack(newString)
+                else:
+                    self._pushStackToIndentLevel(newIndent, newString)
+                return ("", True, True)
 
+            
+    #Private method
+    def _reset(self):
+        self.escaping = False
+        self.capturingMode = False
+        self.indentStack = []
+        self.capturedStrStack = []
+        self.returnStr = ''
+        
+    def _numberOfStartingBackquote(self, origStr):
+        i = 0
+        count = 0
+        while i < len(origStr):
+            if origStr[i] == '>' or ' ':
+                if origStr[i] == '>':
+                    count += 1
+            else:
+                break
+            i += 1
+        return count
+    
+    
+    def _insertCurrentOrRewind(self,newIndent):
+        i = len(self.indentStack) - 1
+        while i >= 0 and newIndent < self.indentStack[i]:
+            i -= 1
+        if self.indentStack[i] == newIndent:
+            return True #Rewind
+        else:
+            return False #insert on current
+            
+    def _numberOfStartingSpace(self, origStr):
+        return self._numberOfConsecutiveCharacters(origStr," ",0)
+
+    def _pushStackToIndentLevel(self, newIndent, newString):
+        if 
+        self.capturedStrStack.append([newString])
+        self.indentStack.append(newIndent)
+    
+    def _insertOnCurrentStack(self, new_str):
+        self.capturedStrStack[-1].append(new_str)
+
+    def _rewindStackToIndentLevel(self, newIndent):
+        i = len(self.indentStack) - 1
+        #rewind stack, check which level is current stack
+        while i >= 0:
+            if newIndent < self.indentStack[-1]:
+                currentCapturedStrStack = self.capturedStrStack[-1]
+                del self.capturedStrStack[-1]
+                self._process(currentCapturedStrStack)
+                del self.indentStack[-1]
+            else:
+                break
+            i -= 1
+
+    def _process(self, origStrList):
+        returnStr = "<blockquote>"
+        for each in origStrList:
+            returnStr += each
+        returnStr += "</blockquote>"
+        if len(self.capturedStrStack) == 0:
+            self.returnStr = returnStr
+        else:
+            self.capturedStrStack[-1].append(returnStr)
+
+   
 
 #Need to happen before <p>
 class MDCodeTag(MDTag):
@@ -419,3 +533,67 @@ class MDBlockParser:
 
 class MDInlineParser:
     pass
+    
+quoteTag = MDQuoteTag()
+
+test_code = """
+> sdfasf
+> >>
+> >>sdsfafas
+> >>
+> >>fsdaf
+> >>
+> >dsfa
+> 
+> sdfadfsa
+> sdfasfa
+> sd
+> 
+> sdf
+> sdfs
+> 
+> 
+> sdfsaf
+> 
+> fsdaf
+
+sdfas
+"""
+return_str = ""
+control = None
+for line in test_code.splitlines(True):
+    print("%%%%%%" + line.strip('\n'))
+    if (control == None):
+            print("Control none")
+            new_str,match,capture = quoteTag.action(line)
+            print("$$Add str:" + new_str)
+            return_str += new_str
+            if match:
+                    print("match!Should not do others")
+            else:
+                    print("Not match!Should do others")
+            if capture:
+                    control = quoteTag
+                    print("capture!")
+            else:
+                    control = None
+                    print("not capture!")
+    else:
+            print("Control is c")
+            new_str,match,capture = quoteTag.action(line)
+            return_str += new_str
+            print("$$Add str:" + new_str)
+            if match:
+                    print("continue match!Should not do others")
+            else:
+                    print("Not match!Out")
+            if capture:
+                    control = quoteTag
+                    print("continue capture!")
+            else:
+                    control = None
+                    print("not capture!Out")
+if control:
+    new_str,match,capture = quoteTag.action("   \nsdadfasfd\n")
+    return_str += new_str
+print(return_str)
