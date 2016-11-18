@@ -300,11 +300,16 @@ class MDQuoteTag(MDRegexTag):
                 self.escaping = False
                 newString = matchObj.group("content")
                 if newIndent < self.indentStack[-1]:
-                    if self._insertCurrentOrRewind(newIndent):
-                        self._rewindStackToIndentLevel(newIndent)
-                        self._insertOnCurrentStack(newString)
+                    if newString == '\n': #empty
+                        self.escapingLevel = True
                     else:
-                        self._insertOnCurrentStack(newString)
+                        if self.escapingLevel == True:
+                            self._rewindStackToIndentLevel(newIndent)
+                            self._insertOnCurrentStack(newString)
+                            self.escapingLevel = False
+                        else:
+                            self._insertOnCurrentStack(newString)
+                            self.escapingLevel = False
                 elif newIndent == self.indentStack[-1]:
                     self._insertOnCurrentStack(newString)
                 else:
@@ -315,6 +320,7 @@ class MDQuoteTag(MDRegexTag):
     #Private method
     def _reset(self):
         self.escaping = False
+        self.escapingLevel = False
         self.capturingMode = False
         self.indentStack = []
         self.capturedStrStack = []
@@ -346,13 +352,18 @@ class MDQuoteTag(MDRegexTag):
         return self._numberOfConsecutiveCharacters(origStr," ",0)
 
     def _pushStackToIndentLevel(self, newIndent, newString):
-        if 
+        inbetween = 0
+        if len(self.indentStack) > 0:
+            inbetween = newIndent - self.indentStack[-1] - 1
+            for i in range(inbetween):
+                self.capturedStrStack.append([''])
+                self.indentStack.append(self.indentStack[-1] + inbetween + 1)
         self.capturedStrStack.append([newString])
         self.indentStack.append(newIndent)
     
     def _insertOnCurrentStack(self, new_str):
         self.capturedStrStack[-1].append(new_str)
-
+        
     def _rewindStackToIndentLevel(self, newIndent):
         i = len(self.indentStack) - 1
         #rewind stack, check which level is current stack
@@ -538,14 +549,17 @@ quoteTag = MDQuoteTag()
 
 test_code = """
 > sdfasf
-> >>
-> >>sdsfafas
-> >>
-> >>fsdaf
-> >>
-> >dsfa
+> > 
+> > >sdsfafas
+> > >
+> > >fsdaf
+> > >
+> > > >dsfas
+>
+> > sdaf
 > 
-> sdfadfsa
+> 
+sdfadfsa
 > sdfasfa
 > sd
 > 
@@ -557,7 +571,7 @@ test_code = """
 > 
 > fsdaf
 
-sdfas
+sd
 """
 return_str = ""
 control = None
