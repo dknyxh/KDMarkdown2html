@@ -218,7 +218,6 @@ class MDListTag(MDRegexTag):
         self.indentStack = []
         self.capturedStrStack = []
         self.returnStr = ''
-        self.returnStrStack = []
 
     def _insertCurrentOrRewind(self,newIndent):
         i = len(self.indentStack) - 1
@@ -235,7 +234,6 @@ class MDListTag(MDRegexTag):
     def _pushStackToIndentLevel(self, newIndent, newString, newSymbols):
         self.capturedStrStack.append([newString])
         self.indentStack.append((newIndent, newSymbols[0], newSymbols[1]))
-        self.returnStrStack.append([])
     
     def _insertOnCurrentStack(self, new_str):
         self.capturedStrStack[-1].append(new_str)
@@ -521,15 +519,36 @@ test_code = """
  3. sdfafsadf
  4. fsddfasdf
  sdfsdafas
-   sdfsadfsaf
+     sdfsadfsaf
+ - sdfasf
+        - sdfafdas
+    - fdsadfa
+- sdfadfa
+         - fsdafdfsaf
+    - fdsafafas
 fsdfadfafadf
 3. sdfsafdaf
-    5. dsafasdfa
-  4. ssdfdafaf
+        5. dsafasdfa
+    4. ssdfdafaf
 3. sdfasdfaf
-       8. sfdasdfda
-  3. sdasdfasf
+             8. sfdasdfda
+    3. sdasdfasf
 
+- sdafdasfd
+ - fsdafaf
+     - dasfasf
+
+fsdfsaf
+
+- sdfasdfa
+ - dsafa
+ 1. sdafdsaf
+         - fdsafa
+ - dsafaf
+- sdfadf
+- fsdfaf
+
+sdfsafda
 """
 return_str = ""
 control = None
@@ -568,5 +587,5 @@ for line in test_code.splitlines(True):
 if control:
   new_str,match,capture = listTag.action("   \nsdadfasfd\n")
   return_str += new_str
-print(return_str)
+#print(return_str)
 print(listTag.returnStr)
