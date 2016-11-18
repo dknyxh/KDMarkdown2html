@@ -256,10 +256,10 @@ class MDListTag(MDRegexTag):
     def _process(self, origStrList):
         returnStr = self.indentStack[-1][1]
         for each in origStrList:
-#            if not (each.startswith("<ol>") or each.startswith("<ul>")):
-             returnStr += r"<li>" + each + r"</li>"
-#            else:
-#                returnStr += each
+            if not (each.startswith("<ol>") or each.startswith("<ul>")):
+                returnStr += r"<li>" + each + r"</li>"
+            else:
+                returnStr += each
         returnStr += self.indentStack[-1][2]
         if len(self.capturedStrStack) == 0:
             self.returnStr = returnStr
@@ -358,42 +358,6 @@ class MDInlineCode(MDTag):
         super(MDInlineCode,self).__init__("inline code tag")
 
     def action(self,origStr):
-        # 
-        #   i = 0
-        #   ignoretickCount = 0
-        #   tickPairs = []
-        #   while i < len(origStr):
-        #       # accept tick < tick count
-        #       # print(ignoretickCount)
-        #       if ignoretickCount > 0:
-        #           if origStr[i] == "`":
-        #               tickcount = self._numberOfConsecutiveTicks(origStr,i)
-        #               if tickcount >= ignoretickCount:
-        #                   tickPairs.append((i, ignoretickCount))
-        #                   i+= ignoretickCount
-        #                   ignoretickCount = 0
-        #               else:
-        #                   i+= tickcount
-        #           else:
-        #               i+= 1
-        #       # accept all tick
-        #       else:
-        #           if origStr[i] == "`":
-        #               tickcount = self._numberOfConsecutiveTicks(origStr,i)
-        #               if tickcount >= 1:
-        #                   ignoretickCount = tickcount
-        #               tickPairs.append((i, tickcount))
-        #               i+= tickcount
-        #           else:
-        #               i+= 1
-        #   for each in range(len(tickPairs)/2):
-        #       print([tickPairs[each*2][0],tickPairs[each*2+1][0] + tickPairs[each*2+1][1]])
-        #       print(origStr[tickPairs[each*2][0]:tickPairs[each*2+1][0] + tickPairs[each*2+1][1]])
-
-        #   if len(tickPairs) % 2 == 0:
-        #       print("good")
-        #   else:
-        #       print("bad")
         i = 0
         tickList = []
         tickPairs = []
