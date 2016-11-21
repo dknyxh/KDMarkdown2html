@@ -51,6 +51,8 @@ rules_order = [];
 #Step4
 # Profit!
 
+re.DOTALL
+
 
 class MDTag(object):
     def __init__(self,nameStr):
@@ -79,7 +81,7 @@ class MDTag(object):
 
 class MDRegexTag(MDTag):
     def __init__(self, nameStr, regexStr):
-        self.regexObj = re.compile(regexStr)
+        self.regexObj = re.compile(regexStr, re.DOTALL)
         super(MDRegexTag, self).__init__(nameStr)
 
     def action(self, origStr):
@@ -147,7 +149,7 @@ class MDListTag(MDRegexTag):
     """
     def __init__(self):
         self._reset()
-        super(MDListTag,self).__init__("list tag", r"^ *(?P<symbol>([0-9]+?\.)|-) (?P<content>.*\n?)")
+        super(MDListTag,self).__init__("list tag", r"^ *(?P<symbol>([0-9]+?\.)|-) (?P<content>.*?)")
 
     def action(self,origStr):
         if self.capturingMode == False:
@@ -263,7 +265,7 @@ class MDListTag(MDRegexTag):
 class MDQuoteTag(MDRegexTag):
     def __init__(self):
         self._reset()
-        super(MDQuoteTag, self).__init__("quote tag", r"^(> ?)+(?P<content>.*\n?)")
+        super(MDQuoteTag, self).__init__("quote tag", r"^(> ?)+(?P<content>.*?)")
         
     def action(self,origStr):
         if self.capturingMode == False:
@@ -433,51 +435,71 @@ class MDCodeTag(MDTag):
 #Inline
 class MDBoldTag(MDRegexTag):
     def __init__(self):
-        super(MDBoldTag,self).__init__("bold tag", r"\*\*(?P<content>[^*]+?)\*\*")
+        super(MDBoldTag,self).__init__("bold tag", r"(\*\*(?P<content1>[^*]+?)\*\*)|(__(?P<content2>[^_]+?)__)")
 
-    def _replaceBold(matchObj):
-        return "<b>" + matchObj.group("content") + "</b>"
+    def _replaceBold(self, matchObj):
+        if matchObj.group("content1"):
+            return "<b>" + matchObj.group("content1") + "</b>"
+        elif matchObj.group("content2"):
+            return "<b>" + matchObj.group("content2") + "</b>"
+        else:
+            return ""
         
     def action(self,origStr):
-        returnStr = self.regexObj.sub(_replaceBold, origStr)
+        returnStr = self.regexObj.sub(self._replaceBold, origStr)
         return returnStr,False,False
     
 
 class MDEmphasisTag(MDRegexTag):
     def __init__(self):
-        super(MDEmphasisTag,self).__init__("emphasis tag", r"\*(?P<content>[^*]+?)\*")
+        super(MDEmphasisTag,self).__init__("emphasis tag", r"(\*(?P<content1>[^*]+?)\*)|(_(?P<content2>[^_]+?)_)")
 
-    def _replaceEmphasis(matchObj):
-        return "<em>" + matchObj.group("content") + "</em>"
-    
+    def _replaceEmphasis(self, matchObj):
+        if matchObj.group("content1"):
+            return "<em>" + matchObj.group("content1") + "</em>"
+        elif matchObj.group("content2"):
+            return "<em>" + matchObj.group("content2") + "</em>"
+        else:
+            return ""
+            
     def action(self,origStr):
-        returnStr = self.regexObj.sub(_replaceEmphasis, origStr)
+        returnStr = self.regexObj.sub(self._replaceEmphasis, origStr)
         return returnStr,False,False
 
 class MDStrikeThroughTag(MDRegexTag):
     def __init__(self):
         super(MDStrikeThroughTag,self).__init__("strike through tag", r"~~(?P<content>[^~]+?)~~")
 
-    def _replaceStrikeThrough(matchObj):
+    def _replaceStrikeThrough(self, matchObj):
         return "<del>" + matchObj.group("content") + "</del>"
 
     def action(self,origStr):
-        returnStr = self.regexObj.sub(_replaceStrikeThrough, origStr)
+        returnStr = self.regexObj.sub(self._replaceStrikeThrough, origStr)
         return returnStr,False,False
         
 class MDImgTag(MDRegexTag):
     def __init__(self):
-        super(MDImgTag,self).__init__("img tag",r"\!\[.*?\]\(.*?\)")
+        super(MDImgTag,self).__init__("img tag",r"\!\[(?P<name>.*?)\]\((?P<src>.*?)\)")
+
+    def _replaceImg(self, matchObj):
+        return '<img src="{}" alt="{}">'.format( matchObj.group("src"), matchObj.group("name"))
 
     def action(self,origStr):
-        pass
+        returnStr = self,regexObj.sub(self._replaceImg, origStr)
+        return returnStr, False, False
 
 
 class MDLinkTag(MDRegexTag):
     def __init__(self):
-        super(MDLinkTag,self).__init__("link tag",r"\[.*?\]\(.*?\)")
+        super(MDLinkTag,self).__init__("link tag",r"\[(?P<name>.*?)\]\((?P<src>.*?)\)")
+        
+    def _replaceLink(self, matchObj):
+        return '<a href="{}">{}</a>'.format( matchObj.group("src"),matchObj.group("name"))
+        
     def action(self,origStr):
-        pass
+        returnStr = self,regexObj.sub(self._replaceLink, origStr)
+        return returnStr, False, False
+        
 
 class MDInlineCode(MDTag):
     def __init__(self):
@@ -582,41 +604,55 @@ sdfadfsa
 
 sd
 """
-return_str = ""
-control = None
-for line in test_code.splitlines(True):
-    print("%%%%%%" + line.strip('\n'))
-    if (control == None):
-            print("Control none")
-            new_str,match,capture = quoteTag.action(line)
-            print("$$Add str:" + new_str)
-            return_str += new_str
-            if match:
-                    print("match!Should not do others")
-            else:
-                    print("Not match!Should do others")
-            if capture:
-                    control = quoteTag
-                    print("capture!")
-            else:
-                    control = None
-                    print("not capture!")
-    else:
-            print("Control is c")
-            new_str,match,capture = quoteTag.action(line)
-            return_str += new_str
-            print("$$Add str:" + new_str)
-            if match:
-                    print("continue match!Should not do others")
-            else:
-                    print("Not match!Out")
-            if capture:
-                    control = quoteTag
-                    print("continue capture!")
-            else:
-                    control = None
-                    print("not capture!Out")
-if control:
-    new_str,match,capture = quoteTag.action("   \nsdadfasfd\n")
-    return_str += new_str
-print(return_str)
+#return_str = ""
+#control = None
+#for line in test_code.splitlines(True):
+#    print("%%%%%%" + line.strip('\n'))
+#    if (control == None):
+#            print("Control none")
+#            new_str,match,capture = quoteTag.action(line)
+#            print("$$Add str:" + new_str)
+#            return_str += new_str
+#            if match:
+#                    print("match!Should not do others")
+#            else:
+#                    print("Not match!Should do others")
+#            if capture:
+#                    control = quoteTag
+#                    print("capture!")
+#            else:
+#                    control = None
+#                    print("not capture!")
+#    else:
+#            print("Control is c")
+#            new_str,match,capture = quoteTag.action(line)
+#            return_str += new_str
+#            print("$$Add str:" + new_str)
+#            if match:
+#                    print("continue match!Should not do others")
+#            else:
+#                    print("Not match!Out")
+#            if capture:
+#                    control = quoteTag
+#                    print("continue capture!")
+#            else:
+#                    control = None
+#                    print("not capture!Out")
+#if control:
+#    new_str,match,capture = quoteTag.action("   \nsdadfasfd\n")
+#    return_str += new_str
+#print(return_str)
+
+b = MDBoldTag()
+boldString = b.action("""
+__sdsdafa__
+_ sdasdf _
+ __ sadf __
+__ ssdf
+asdf __
+
+sdfasf__ sadf__
+sadfas__sdafa
+**
+""")
+print(boldString[0])
