@@ -51,8 +51,6 @@ rules_order = [];
 #Step4
 # Profit!
 
-re.DOTALL
-
 
 class MDTag(object):
     def __init__(self,nameStr):
@@ -389,7 +387,44 @@ class MDQuoteTag(MDRegexTag):
         else:
             self.capturedStrStack[-1].append(returnStr)
 
-   
+class MDCodeBlockTag(MDRegexTag):
+    def __init__(self):
+        self.captureingMode = False
+        self.capturedString = ""
+        self.language = ""
+        super(MDCodeBlockTag, r" *```(?P<language>.*)")
+    
+    def action(self,origStr):
+        if self.capturedMode == False:
+            matchObj = self.regexObj.match(origStr)
+            if matchObj is None:
+                return ("", False, False)
+            else:
+                self.captureingMode = True
+                self.language = matchObj.group("language").strip()
+                return ("", True, True)
+        else:
+            matchObj = self.regexObj.match(origStr)
+            if matchObj is None:
+                self.capturedString += origStr
+                return ("", True, True)
+            else:
+                self.captureingMode = False
+                returnStr = self._process()
+                self._reset()
+                return (returnStr, True, False)
+                
+    def _process(self):
+        if self.language:
+            return '<div><pre><code class="language-{}">{}</code></pre></div>'.format(self.language,self.capturedString)
+        else:
+            return '<div><pre><code class="language-none">{}</code></pre></div>'.format(self.capturedString)
+        
+                    
+    def _reset(self):
+        self.capturedString = ""
+        self.captureingMode = False
+        self.language = ""
 
 #Need to happen before <p>
 class MDCodeTag(MDTag):
