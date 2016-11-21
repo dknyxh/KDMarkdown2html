@@ -258,7 +258,15 @@ class MDListTag(MDRegexTag):
         else:
             self.capturedStrStack[-1].append(returnStr)
         
-
+class MDHRTag(MDRegexTag):
+    def __init__(self):
+        super(MDHRTag, self).__init__("horizontal rule tag", "^ *((\*\*\*\**)|(____*)|(----*))$")
+    
+    def action(self, origStr):
+        if self.regexObj.match(origStr):
+            return ("<hr>\n", True, False)
+        else:
+            return ("", False ,False)
 
 class MDQuoteTag(MDRegexTag):
     def __init__(self):
