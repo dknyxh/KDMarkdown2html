@@ -93,6 +93,15 @@ class MDRegexTag(MDTag):
         """
         raise Exception('Method not implemented!')
 
+class MDMultilineTag(MDTag):
+    def __init__(self, nameStr):
+        super(MDMultilineTag, self).__init__(nameStr)
+    
+    def flush(self):
+        """none -> str,
+        Flush what's currently remained in the MDMultilineTag
+        """
+        raise Exception('Metho not implemented!')
 
 #block level
 class MDHeaderTag(MDRegexTag):
@@ -128,20 +137,34 @@ class MDHeaderTag(MDRegexTag):
         newString = "<h{}>{}</h{}>".format(str(count), newString, str(count))
         return newString
 
-class MDParaTag(MDTag):
+class MDParaTag(MDMultilineTag):
     def __init__(self):
         self.capturingMode = False
-        self.capturingStr = ""
+        self.capturedStr = ""
         super(MDParaTag,self).__init__("p tag")
 
     def action(self,origStr):
         if self.capturingMode == False:
-            if origStr.strip() != '\n':
-                pass
+            self.capturingMode = True
+            self.capturedStr += origStr
+            return ("", True, True)
         else:
-            pass
+            if origStr.strip(" ") == '\n':
+                returnStr = self.capturedStr
+                self._reset()
+                return returnStr, True, False
+            else:
+                self.capturedStr += origStr
+                return ("", True, True)
+                
+    def _reset(self):
+        self.capturingMode = False
+        self.capturingStr = ""
+        
+    def flush(self):
+        pass
 
-class MDListTag(MDRegexTag):
+class MDListTag(MDRegexTag, MDMultilineTag):
     """
     r" *[0-9]+\. .*"
     """
@@ -268,7 +291,7 @@ class MDHRTag(MDRegexTag):
         else:
             return ("", False ,False)
 
-class MDQuoteTag(MDRegexTag):
+class MDQuoteTag(MDRegexTag, MDMultilineTag):
     def __init__(self):
         self._reset()
         super(MDQuoteTag, self).__init__("quote tag", r"^(> ?)+(?P<content>.*?)")
@@ -395,7 +418,7 @@ class MDQuoteTag(MDRegexTag):
         else:
             self.capturedStrStack[-1].append(returnStr)
 
-class MDCodeBlockTag(MDRegexTag):
+class MDCodeBlockTag(MDRegexTag, MDMultilineTag):
     def __init__(self):
         self.captureingMode = False
         self.capturedString = ""
@@ -435,7 +458,7 @@ class MDCodeBlockTag(MDRegexTag):
         self.language = ""
 
 #Need to happen before <p>
-class MDCodeTag(MDTag):
+class MDCodeTag(MDMultilineTag):
     def __init__(self):
         self.capturingMode = False
         self.capturedStr = ""
@@ -590,6 +613,8 @@ class MDInlineCode(MDTag):
             print([tickPairs[each][0][0],tickPairs[each][1][0] + tickPairs[each][1][1]])
             print(origStr[tickPairs[each][0][0]:tickPairs[each][1][0] + tickPairs[each][1][1]])
 
+    
+
     def _numberOfConsecutiveTicks(self, origStr, startingIndex):
         return self._numberOfConsecutiveCharacters(origStr,"`",startingIndex)
 
@@ -662,12 +687,15 @@ class MDBlockParser:
                     continue
                 else:
                     raise("Can't have isContinuous true while isMatch false")
-         return returnStr, control
+        return returnStr, control
                 
 
 class MDInlineParser:
-    pass
-    
+    def __init__(self):
+        pass
+
+
+
 quoteTag = MDQuoteTag()
 
 test_code = """
