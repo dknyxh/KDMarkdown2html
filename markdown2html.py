@@ -614,7 +614,56 @@ class MDParser:
         return html
 
 class MDBlockParser:
-    pass
+    def __init__(self):
+        self.listOfTags = [MDCodeTag(),MDHeaderTag(),MDParaTag(),MDListTag(),\
+        MDHRTag(),MDQuoteTag(),MDCodeBlockTag()]
+ 
+    def parse(self, origText):
+        curControl = None
+        returnStr = ''
+        for line in origText.splitlines(True):
+            if curControl == None:
+                newStr, control = self._lookForMatch(line)
+                returnStr += newStr
+                curControl = control
+                continue
+            else:
+                oldcontrol = curControl
+                newStr, isMatch, isContinues = curControl.action(line)
+                returnStr += newStr
+                if isContinuous and isMatch:
+                    pass
+                elif not isContinuous and isMatch:
+                    curControl = None
+                elif not isContinuous and not isMatch:
+                    newStr, control = self._lookForMatch(line,oldcontrol)
+                    returnStr += newStr
+                    curControl = control
+                else:
+                    raise("Can't have isContinuous true while isMatch false")
+        if curControl:
+            returnStr += curControl.flush()
+        return returnStr
+            
+    def _lookForMatch(self, line ,exceptTag = None):
+        returnStr = ''
+        control = None
+        for each in self.listOfTags:
+            if each != exceptTag:
+                newStr, isMatch, isContinuous = each.action(line)
+                returnStr += newStr
+                if isContinuous and isMatch:
+                    control = each
+                    break
+                elif not isContinuous and isMatch:
+                    control = None
+                    break
+                elif not isContinuous and not isMatch:
+                    continue
+                else:
+                    raise("Can't have isContinuous true while isMatch false")
+         return returnStr, control
+                
 
 class MDInlineParser:
     pass
