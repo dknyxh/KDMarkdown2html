@@ -607,12 +607,17 @@ class MDInlineCode(MDTag):
                     k += 1
                 deduction +=1
             j+= (1 + jchange)
-
-
-        for each in range(len(tickPairs)):
-            print([tickPairs[each][0][0],tickPairs[each][1][0] + tickPairs[each][1][1]])
-            print(origStr[tickPairs[each][0][0]:tickPairs[each][1][0] + tickPairs[each][1][1]])
-
+            
+        returnStr = ''
+        nextStartIndex = 0
+        for each in tickPairs:
+            leftIndex = each[0][0] + each[0][1]
+            rightIndex = each[1][0]
+            curEndIndex = each[0][0]
+            returnStr += origStr[nextStartIndex:curEndIndex] + "<code>" + origStr[leftIndex:rightIndex] +"</code>"
+            nextStartIndex = each[1][0] + each[1][1]
+        returnStr += [nextStartIndex:]
+        return returnStr
     
 
     def _numberOfConsecutiveTicks(self, origStr, startingIndex):
