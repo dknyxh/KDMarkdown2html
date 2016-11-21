@@ -616,13 +616,23 @@ class MDInlineCode(MDTag):
             curEndIndex = each[0][0]
             returnStr += origStr[nextStartIndex:curEndIndex] + "<code>" + origStr[leftIndex:rightIndex] +"</code>"
             nextStartIndex = each[1][0] + each[1][1]
-        returnStr += [nextStartIndex:]
+        returnStr += origStr[nextStartIndex:]
         return returnStr
     
 
     def _numberOfConsecutiveTicks(self, origStr, startingIndex):
         return self._numberOfConsecutiveCharacters(origStr,"`",startingIndex)
 
+class MDHtmlTag(MDTag):
+    def __init__(self):
+        super(MDHtmlTag, self).__init__("html related tags")
+        self.replacementDict = {
+            "'":"something"
+            
+            
+        }
+    def action(self, origStr):
+        pass
 
 #Parser
 class MDParser:
@@ -768,16 +778,34 @@ sd
 #    return_str += new_str
 #print(return_str)
 
-b = MDBoldTag()
-boldString = b.action("""
-__sdsdafa__
-_ sdasdf _
- __ sadf __
-__ ssdf
-asdf __
+#b = MDBoldTag()
+#boldString = b.action("""
+#__sdsdafa__
+#_ sdasdf _
+# __ sadf __
+#__ ssdf
+#asdf __
+#
+#sdfasf__ sadf__
+#sadfas__sdafa
+#**
+#""")
+#print(boldString[0])
 
-sdfasf__ sadf__
-sadfas__sdafa
-**
+
+inline = MDInlineCode()
+returnStr = inline.action("""
+``ds`af``
+``saf``
+`
+
+
+
+`sdf ` `
+`` ` ``
+``` `` ```
+`d```
+```sdaf`` sdasdf``` sdfa`saf``sdvsvzx`` `` sdaf`1sv`svzxc``
 """)
-print(boldString[0])
+
+print(returnStr)
