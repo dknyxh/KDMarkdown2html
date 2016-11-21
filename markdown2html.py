@@ -433,29 +433,38 @@ class MDCodeTag(MDTag):
 #Inline
 class MDBoldTag(MDRegexTag):
     def __init__(self):
-        super(MDBoldTag,self).__init__("bold tag", r"\*\*[^*]+?\*\*")
+        super(MDBoldTag,self).__init__("bold tag", r"\*\*(?P<content>[^*]+?)\*\*")
 
+    def _replaceBold(matchObj):
+        return "<b>" + matchObj.group("content") + "</b>"
+        
     def action(self,origStr):
-        matchObj = self.regexObj.match(origStr)
-        if matchObj is None:
-            return ("", False, False)
-        else:
-            pass
+        returnStr = self.regexObj.sub(_replaceBold, origStr)
+        return returnStr,False,False
+    
 
 class MDEmphasisTag(MDRegexTag):
     def __init__(self):
-        super(MDEmphasisTag,self).__init__("emphasis tag", r"\*[^*]+?\*")
+        super(MDEmphasisTag,self).__init__("emphasis tag", r"\*(?P<content>[^*]+?)\*")
 
+    def _replaceEmphasis(matchObj):
+        return "<em>" + matchObj.group("content") + "</em>"
+    
     def action(self,origStr):
-        pass
+        returnStr = self.regexObj.sub(_replaceEmphasis, origStr)
+        return returnStr,False,False
 
 class MDStrikeThroughTag(MDRegexTag):
     def __init__(self):
-        super(MDStrikeThroughTag,self).__init__("strike through tag", r"~~[^~]+?~~")
+        super(MDStrikeThroughTag,self).__init__("strike through tag", r"~~(?P<content>[^~]+?)~~")
+
+    def _replaceStrikeThrough(matchObj):
+        return "<del>" + matchObj.group("content") + "</del>"
 
     def action(self,origStr):
-        pass
-
+        returnStr = self.regexObj.sub(_replaceStrikeThrough, origStr)
+        return returnStr,False,False
+        
 class MDImgTag(MDRegexTag):
     def __init__(self):
         super(MDImgTag,self).__init__("img tag",r"\!\[.*?\]\(.*?\)")
